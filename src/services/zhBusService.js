@@ -9,5 +9,5 @@ export function getLineDetailByName (lineName) {
 }
 
 export function getRealTimeStatusByLineNameAndHeadStation (lineName, headStation) {
-  return axios.get(`/RealTime/GetRealTime?id=${lineName}&fromStation=${headStation}`)
+  return axios.get(`/api/zhbus/RealTime/GetRealTime?id=${lineName}&fromStation=${headStation}`)
 }

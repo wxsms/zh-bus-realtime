@@ -1,14 +1,83 @@
 <template>
-  <div id="map"></div>
+  <div class="map-container">
+    <div id="map"></div>
+  </div>
 </template>
 
 <script>
   import L from 'leaflet'
-  import 'leaflet/dist/leaflet.css'
+  import * as service from '../services/zhBusService'
+  import findIndex from 'lodash/findIndex'
+
+  delete L.Icon.Default.prototype._getIconUrl
+
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+    iconUrl: require('leaflet/dist/images/marker-icon.png'),
+    shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+  })
+
+  const busStationIcon = L.icon({
+    iconUrl: '/static/bus-station.png',
+    iconSize: [20, 20],
+    popupAnchor: [0, -10],
+  })
 
   export default {
-    mounted () {
+    data () {
+      return {
+        map: null
+      }
+    },
+    mounted: async function () {
       this.initMap()
+      const res = await service.getLineDetailByName('K3')
+      const line = res.data.data[1]
+      const lineId = line.Id
+      const res2 = await service.getStationListByLineId(lineId)
+      const stations = res2.data.data
+      const pointList = stations.map(v => new L.LatLng(v.Lat, v.Lng))
+      // 线路
+      const polyline = new L.Polyline(pointList, {
+        color: 'red',
+        weight: 3,
+        opacity: 0.5,
+        smoothFactor: 1
+      })
+      polyline.addTo(this.map)
+      this.map.fitBounds(pointList)
+      // 站点
+      stations.forEach(v => {
+        L
+          .marker([v.Lat, v.Lng], {
+            icon: busStationIcon
+          })
+          .addTo(this.map)
+          .bindPopup(`${v.Name}`)
+      })
+      const res3 = await service.getRealTimeStatusByLineNameAndHeadStation('K3', line.FromStation)
+      const realTimes = res3.data.data
+      realTimes.forEach(v => {
+        const stationIndex = findIndex(stations, {Name: v.CurrentStation})
+        if (stationIndex >= 0) {
+          if (v.LastPosition === 8) {
+            const station = stations[stationIndex]
+            L
+              .marker([station.Lat, station.Lng])
+              .addTo(this.map)
+              .bindPopup(`${v.BusNumber}`)
+          } else if (stationIndex < stations.length - 2) {
+            const station = stations[stationIndex]
+            const stationNext = stations[stationIndex + 1]
+            const lat = (Number.parseFloat(station.Lat) + Number.parseFloat(stationNext.Lat)) / 2
+            const lng = (Number.parseFloat(station.Lng) + Number.parseFloat(stationNext.Lng)) / 2
+            L
+              .marker([lat, lng])
+              .addTo(this.map)
+              .bindPopup(`${v.BusNumber}`)
+          }
+        }
+      })
     },
     methods: {
       initMap () {
@@ -22,13 +91,25 @@
           subdomains: ['1', '2', '3', '4'], //可用子域名，用于浏览器并发请求
           attribution: '&copy; 高德地图',
         }).addTo(map)
+        this.map = map
       }
     }
   }
 </script>
 
 <style scoped lang="less">
-  #map {
-    height: 100%;
+  .map-container {
+    display: block;
+    position: absolute;
+    height: auto;
+    bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin-top: 50px;
+
+    #map {
+      height: 100%;
+    }
   }
 </style>

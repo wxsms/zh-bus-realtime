@@ -1,6 +1,9 @@
 <template>
   <div id="app">
     <Map :lineNames="lineNames"/>
+    <div class="gui">
+      <input v-model="value" type="text">
+    </div>
   </div>
 </template>
 
@@ -11,6 +14,7 @@
     components: {Map},
     data () {
       return {
+        value: '',
         lineNames: []
       }
     },
@@ -25,5 +29,13 @@
     font-family: 'Avenir', Helvetica, Arial, sans-serif;
     width: 100vw;
     height: 100vh;
+  }
+
+  .gui {
+    z-index: 99999;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
   }
 </style>
