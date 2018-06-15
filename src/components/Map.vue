@@ -1,6 +1,12 @@
 <template>
   <div class="map-container">
     <div id="map"></div>
+    <div class="refresh-btn">
+      <btn @click="refreshMap" :disabled="refreshing">
+        <span v-if="refreshing">......</span>
+        <span v-else>刷新</span>
+      </btn>
+    </div>
   </div>
 </template>
 
@@ -30,8 +36,8 @@
     shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
   })
 
-  const busStationIcon = L.icon({
-    iconUrl: '/static/bus-station.png',
+  const busIcon = L.icon({
+    iconUrl: '/static/bus.png',
     iconSize: [20, 20],
     popupAnchor: [0, -10],
   })
@@ -43,30 +49,21 @@
         map: null,
         tileLayer: null,
         userPointLayer: null,
-        userCircleLayer: null
+        refreshing: false
       }
     },
     watch: {
       lines (lines) {
-        if (Array.isArray(lines)) {
-          this.clearMap()
-          lines.forEach(line => {
-            this.drawBusLine(line.id, line.name, line.fromStation)
-          })
-        }
+        this.refreshMap()
       }
     },
     mounted: async function () {
       this.initMap()
       this.drawTile()
       this.locateUser()
-      if (Array.isArray(this.lines)) {
-        this.lines.forEach(line => {
-          this.drawBusLine(line.id, line.name, line.fromStation)
-        })
-      }
+      this.refreshMap()
       this.map.on('click', function (e) {
-        console.log('Lat, Lon : ' + e.latlng.lat + ', ' + e.latlng.lng)
+        // console.log('Lat, Lon : ' + e.latlng.lat + ', ' + e.latlng.lng)
       })
     },
     methods: {
@@ -90,15 +87,15 @@
       locateUser () {
         try {
           this.map.removeLayer(this.userPointLayer)
-          this.map.removeLayer(this.userCircleLayer)
         } catch (e) {
           // ignore
         }
         this.map.on('locationfound', (e) => {
           const radius = e.accuracy / 2
-          this.userPointLayer = L.marker([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)]).addTo(this.map)
-            .bindPopup('我的位置').openPopup()
-          this.userCircleLayer = L.circle([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)], radius).addTo(this.map)
+          this.userPointLayer = L.layerGroup([
+            L.marker([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)]).bindPopup('我的位置').openPopup(),
+            L.circle([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)], radius)
+          ]).addTo(this.map)
         })
         this.map.on('locationerror', (e) => {
           console.log(e.message)
@@ -107,10 +104,25 @@
       },
       clearMap () {
         this.map.eachLayer((layer) => {
-          if (layer !== this.userPointLayer && layer !== this.userCircleLayer && layer !== this.tileLayer) {
+          if (layer !== this.userPointLayer && layer !== this.tileLayer) {
             this.map.removeLayer(layer)
           }
         })
+      },
+      refreshMap () {
+        this.refreshing = true
+        this.clearMap()
+        if (Array.isArray(this.lines)) {
+          const promises = []
+          this.lines.forEach(line => {
+            promises.push(this.drawBusLine(line.id, line.name, line.fromStation))
+          })
+          Promise.all(promises).then(() => {
+            this.refreshing = false
+          })
+        } else {
+          this.refreshing = false
+        }
       },
       drawBusLine: async function (lineId, lineName, fromStation) {
         const res2 = await service.getStationListByLineId(lineId)
@@ -119,11 +131,11 @@
           v.Lng = TO_GLNG(v.Lng)
           return v
         })
-        const pointList = stations.map(v => new L.LatLng(v.Lat, v.Lng))
         // 线路
+        const pointList = stations.map(v => new L.LatLng(v.Lat, v.Lng))
         const polyline = new L.Polyline(pointList, {
-          color: 'red',
-          weight: 3,
+          color: '#398bfc',
+          weight: 2,
           opacity: 0.5,
           smoothFactor: 1
         })
@@ -132,33 +144,34 @@
         // 站点
         stations.forEach(v => {
           L
-            .marker([v.Lat, v.Lng], {
-              icon: busStationIcon
+            .circle([v.Lat, v.Lng], {
+              radius: 20,
+              color: '#398bfc'
             })
             .addTo(this.map)
             .bindPopup(`${v.Name}`)
         })
+        // 实时
         const res3 = await service.getRealTimeStatusByLineNameAndHeadStation(lineName, fromStation)
         const realTimes = res3.data.data
         realTimes.forEach(v => {
           const stationIndex = findIndex(stations, {Name: v.CurrentStation})
           if (stationIndex >= 0) {
+            let lat, lng
             if (v.LastPosition === 8) {
               const station = stations[stationIndex]
-              L
-                .marker([station.Lat, station.Lng])
-                .addTo(this.map)
-                .bindPopup(`${v.BusNumber}`)
+              lat = station.Lat
+              lng = station.Lng
             } else if (stationIndex < stations.length - 2) {
               const station = stations[stationIndex]
               const stationNext = stations[stationIndex + 1]
-              const lat = (station.Lat + stationNext.Lat) / 2
-              const lng = (station.Lng + stationNext.Lng) / 2
-              L
-                .marker([lat, lng])
-                .addTo(this.map)
-                .bindPopup(`${v.BusNumber}`)
+              lat = (station.Lat + stationNext.Lat) / 2
+              lng = (station.Lng + stationNext.Lng) / 2
             }
+            L
+              .marker([lat, lng])
+              .addTo(this.map)
+              .bindPopup(`${lineName} ${v.BusNumber}`)
           }
         })
       }
@@ -179,6 +192,17 @@
 
     #map {
       height: 100%;
+    }
+
+    .refresh-btn {
+      position: absolute;
+      bottom: 25px;
+      right: 10px;
+      z-index: 99999;
+
+      .btn {
+        width: 55px;
+      }
     }
   }
 </style>
