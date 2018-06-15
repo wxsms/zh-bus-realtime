@@ -1,7 +1,7 @@
 <template>
   <div class="map-container">
     <div id="map"></div>
-    <div class="refresh-btn">
+    <div class="refresh-btn" v-show="lines && lines.length">
       <btn @click="refreshMap" :disabled="refreshing">
         <span v-if="refreshing">......</span>
         <span v-else>刷新</span>
@@ -182,7 +182,7 @@
 <style scoped lang="less">
   .map-container {
     display: block;
-    position: absolute;
+    position: fixed;
     height: auto;
     bottom: 0;
     top: 0;
