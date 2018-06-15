@@ -27,7 +27,8 @@
     props: ['lines'],
     data () {
       return {
-        map: null
+        map: null,
+        tileLayer: null
       }
     },
     watch: {
@@ -59,16 +60,15 @@
         })
       },
       drawTile () {
-        L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        this.tileLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
           subdomains: ['1', '2', '3', '4'], //可用子域名，用于浏览器并发请求
           attribution: '&copy; 高德地图',
         }).addTo(this.map)
       },
       clearMap () {
         this.map.eachLayer((layer) => {
-          this.map.removeLayer(layer)
+          layer !== this.tileLayer && this.map.removeLayer(layer)
         })
-        this.drawTile()
       },
       drawBusLine: async function (lineId, lineName, fromStation) {
         const res2 = await service.getStationListByLineId(lineId)
