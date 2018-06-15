@@ -117,9 +117,19 @@
           this.lines.forEach(line => {
             promises.push(this.drawBusLine(line.id, line.name, line.fromStation))
           })
-          Promise.all(promises).then(() => {
-            this.refreshing = false
-          })
+          Promise
+            .all(promises)
+            .then(() => {
+              this.refreshing = false
+            })
+            .catch(err => {
+              console.error(err)
+              this.$notify({
+                type: 'danger',
+                content: '刷新失败'
+              })
+              this.refreshing = false
+            })
         } else {
           this.refreshing = false
         }
@@ -153,16 +163,16 @@
         })
         // 实时
         const res3 = await service.getRealTimeStatusByLineNameAndHeadStation(lineName, fromStation)
-        const realTimes = res3.data.data
+        const realTimes = res3.data.data || []
         realTimes.forEach(v => {
           const stationIndex = findIndex(stations, {Name: v.CurrentStation})
           if (stationIndex >= 0) {
             let lat, lng
-            if (v.LastPosition === 8) {
+            if (v.LastPosition === '8') {
               const station = stations[stationIndex]
               lat = station.Lat
               lng = station.Lng
-            } else if (stationIndex < stations.length - 2) {
+            } else if (stationIndex < stations.length - 2 && v.LastPosition === '5') {
               const station = stations[stationIndex]
               const stationNext = stations[stationIndex + 1]
               lat = (station.Lat + stationNext.Lat) / 2
