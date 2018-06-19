@@ -2,7 +2,7 @@
   <div class="map-container">
     <div id="map"></div>
     <div class="refresh-btn" v-show="lines && lines.length">
-      <btn @click="refreshMap" :disabled="refreshing">
+      <btn @click="refreshMap(false)" :disabled="refreshing">
         <span v-if="refreshing">......</span>
         <span v-else>刷新</span>
       </btn>
@@ -14,6 +14,7 @@
   import L from 'leaflet'
   import * as service from '../services/zhBusService'
   import findIndex from 'lodash/findIndex'
+  import flatten from 'lodash/flatten'
 
   const TO_GLNG = (lng) => {
     if (typeof lng === 'string') {
@@ -47,8 +48,8 @@
     data () {
       return {
         map: null,
+        busData: [],
         tileLayer: null,
-        userPointLayer: null,
         refreshing: false
       }
     },
@@ -62,8 +63,18 @@
       this.drawTile()
       this.locateUser()
       this.refreshMap()
-      this.map.on('click', function (e) {
+      this.map.on('click', (e) => {
         // console.log('Lat, Lon : ' + e.latlng.lat + ', ' + e.latlng.lng)
+      })
+      this.map.on('locationfound', (e) => {
+        const radius = e.accuracy / 2
+        L.layerGroup([
+          L.marker([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)]).bindPopup('我的位置').openPopup(),
+          L.circle([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)], radius)
+        ]).addTo(this.map)
+      })
+      this.map.on('locationerror', (e) => {
+        console.log(e.message)
       })
     },
     methods: {
@@ -75,6 +86,13 @@
           maxZoom: 18, //最细致，越大越细致
         })
       },
+      centerMap () {
+        const allStations = flatten(this.busData.map(v => v.stations))
+        const pointList = allStations.map(v => new L.LatLng(v.Lat, v.Lng))
+        if (pointList.length) {
+          this.map.fitBounds(pointList)
+        }
+      },
       drawTile () {
         /*this.tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -85,41 +103,32 @@
         }).addTo(this.map)
       },
       locateUser () {
-        try {
-          this.map.removeLayer(this.userPointLayer)
-        } catch (e) {
-          // ignore
-        }
-        this.map.on('locationfound', (e) => {
-          const radius = e.accuracy / 2
-          this.userPointLayer = L.layerGroup([
-            L.marker([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)]).bindPopup('我的位置').openPopup(),
-            L.circle([TO_GLAT(e.latlng.lat), TO_GLNG(e.latlng.lng)], radius)
-          ]).addTo(this.map)
-        })
-        this.map.on('locationerror', (e) => {
-          console.log(e.message)
-        })
         this.map.locate({setView: true, maxZoom: 16})
       },
       clearMap () {
         this.map.eachLayer((layer) => {
-          if (layer !== this.userPointLayer && layer !== this.tileLayer) {
+          if (layer !== this.tileLayer) {
             this.map.removeLayer(layer)
           }
         })
       },
-      refreshMap () {
+      refreshMap (reCenter = true) {
         this.refreshing = true
-        this.clearMap()
         if (Array.isArray(this.lines)) {
           const promises = []
           this.lines.forEach(line => {
-            promises.push(this.drawBusLine(line.id, line.name, line.fromStation))
+            promises.push(this.fetchBusLineData(line.id, line.name, line.fromStation))
           })
           Promise
             .all(promises)
-            .then(() => {
+            .then((res) => {
+              this.busData = res || []
+              this.clearMap()
+              //this.locateUser()
+              this.busData.forEach(this.drawBusLine)
+              if (reCenter) {
+                this.centerMap()
+              }
               this.refreshing = false
             })
             .catch(err => {
@@ -134,13 +143,25 @@
           this.refreshing = false
         }
       },
-      drawBusLine: async function (lineId, lineName, fromStation) {
+      fetchBusLineData: async function (lineId, lineName, fromStation) {
         const res2 = await service.getStationListByLineId(lineId)
         const stations = res2.data.data.map(v => {
           v.Lat = TO_GLAT(v.Lat)
           v.Lng = TO_GLNG(v.Lng)
           return v
         })
+        const res3 = await service.getRealTimeStatusByLineNameAndHeadStation(lineName, fromStation)
+        const realTimes = res3.data.data || []
+        return {
+          stations,
+          realTimes,
+          lineId,
+          lineName,
+          fromStation
+        }
+      },
+      drawBusLine (data) {
+        const stations = data.stations
         // 线路
         const pointList = stations.map(v => new L.LatLng(v.Lat, v.Lng))
         const polyline = new L.Polyline(pointList, {
@@ -150,7 +171,6 @@
           smoothFactor: 1
         })
         polyline.addTo(this.map)
-        this.map.fitBounds(pointList)
         // 站点
         stations.forEach(v => {
           L
@@ -162,8 +182,7 @@
             .bindPopup(`${v.Name}`)
         })
         // 实时
-        const res3 = await service.getRealTimeStatusByLineNameAndHeadStation(lineName, fromStation)
-        const realTimes = res3.data.data || []
+        const realTimes = data.realTimes
         realTimes.forEach(v => {
           const stationIndex = findIndex(stations, {Name: v.CurrentStation})
           if (stationIndex >= 0) {
@@ -181,7 +200,7 @@
             L
               .marker([lat, lng])
               .addTo(this.map)
-              .bindPopup(`${lineName} ${v.BusNumber}`)
+              .bindPopup(`${data.lineName} ${v.BusNumber}`)
           }
         })
       }
