@@ -192,13 +192,13 @@
               icon: lineStartIcon
             })
               .addTo(this.map)
-              .bindPopup(`起点：${station.Name}`)
+              .bindPopup(`${data.lineName}起点：${station.Name}`)
           } else if (index === stations.length - 1) {
             L.marker([station.Lat, station.Lng], {
               icon: lineEndIcon
             })
               .addTo(this.map)
-              .bindPopup(`终点：${station.Name}`)
+              .bindPopup(`${data.lineName}终点：${station.Name}`)
           } else {
             L
               .circle([station.Lat, station.Lng], {
