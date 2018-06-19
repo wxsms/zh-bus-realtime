@@ -43,6 +43,20 @@
     popupAnchor: [0, -10],
   })
 
+  const lineStartIcon = L.icon({
+    iconUrl: '/static/flag-green.png',
+    iconSize: [48, 48],
+    iconAnchor: [10, 45],
+    popupAnchor: [10, -45],
+  })
+
+  const lineEndIcon = L.icon({
+    iconUrl: '/static/flag-red.png',
+    iconSize: [48, 48],
+    iconAnchor: [10, 45],
+    popupAnchor: [10, -45],
+  })
+
   export default {
     props: ['lines'],
     data () {
@@ -62,7 +76,6 @@
       this.initMap()
       this.drawTile()
       this.locateUser()
-      this.refreshMap()
       this.map.on('click', (e) => {
         // console.log('Lat, Lon : ' + e.latlng.lat + ', ' + e.latlng.lng)
       })
@@ -102,8 +115,8 @@
           attribution: '&copy; 高德地图',
         }).addTo(this.map)
       },
-      locateUser () {
-        this.map.locate({setView: true, maxZoom: 16})
+      locateUser (setView = true) {
+        this.map.locate({setView, maxZoom: 16})
       },
       clearMap () {
         this.map.eachLayer((layer) => {
@@ -126,6 +139,7 @@
               this.clearMap()
               //this.locateUser()
               this.busData.forEach(this.drawBusLine)
+              //this.locateUser(false)
               if (reCenter) {
                 this.centerMap()
               }
@@ -172,14 +186,28 @@
         })
         polyline.addTo(this.map)
         // 站点
-        stations.forEach(v => {
-          L
-            .circle([v.Lat, v.Lng], {
-              radius: 20,
-              color: '#398bfc'
+        stations.forEach((station, index) => {
+          if (index === 0) {
+            L.marker([station.Lat, station.Lng], {
+              icon: lineStartIcon
             })
-            .addTo(this.map)
-            .bindPopup(`${v.Name}`)
+              .addTo(this.map)
+              .bindPopup(`起点：${station.Name}`)
+          } else if (index === stations.length - 1) {
+            L.marker([station.Lat, station.Lng], {
+              icon: lineEndIcon
+            })
+              .addTo(this.map)
+              .bindPopup(`终点：${station.Name}`)
+          } else {
+            L
+              .circle([station.Lat, station.Lng], {
+                radius: 20,
+                color: '#398bfc'
+              })
+              .addTo(this.map)
+              .bindPopup(`${station.Name}`)
+          }
         })
         // 实时
         const realTimes = data.realTimes
