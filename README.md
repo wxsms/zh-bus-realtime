@@ -1,6 +1,13 @@
-# zh-bus-realtime
+# 珠海公交巴士实时地图
 
-> A Vue.js project
+* 巴士线路、站点、实时位置查询
+* 支持同时查看多条线路
+
+地址：[https://zhbus.wxsm.space](https://zhbus.wxsm.space)
+
+截图：
+
+![screenshot](https://raw.githubusercontent.com/wxsms/zh-bus-realtime/master/screenshot.png)
 
 ## Build Setup
 
