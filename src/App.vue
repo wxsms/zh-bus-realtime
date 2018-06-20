@@ -62,6 +62,7 @@
         <input ref="input" class="form-control" type="text" placeholder="输入方案名..." v-model="saveName">
       </div>
       <br/>
+      <h5>方案内容：</h5>
       <ol>
         <li v-for="line in lines">
           <span>{{line.name}}</span>
@@ -78,11 +79,22 @@
       </div>
     </modal>
     <modal v-model="loadModalVisible" title="读取方案" :footer="false">
-      <btn-group vertical style="width: 100%">
-        <btn class="list-group-item" v-for="savedLines in saved" @click="loadSavedLine(savedLines)">
-          {{savedLines.name}}
-        </btn>
-      </btn-group>
+      <div class="text-center" v-if="saved.length === 0">
+        （暂无数据）
+      </div>
+      <div v-else>
+        <h5>直接点击预设方案即可读取</h5>
+        <div>
+          <btn-group vertical style="width: 100%">
+            <btn :type="index%2===0?'info':'primary'" v-for="(savedLines,index) in saved"
+                 @click="loadSavedLine(savedLines)">
+              {{savedLines.name}}
+            </btn>
+          </btn-group>
+        </div>
+        <br/>
+        <btn block type="danger" @click="clearSaved">清除方案数据</btn>
+      </div>
     </modal>
   </div>
 </template>
@@ -92,10 +104,9 @@
   import * as service from './services/zhBusService'
   import findIndex from 'lodash/findIndex'
   import LoadingIcon from './components/LoadingIcon.vue'
-  import BtnGroup from 'uiv/src/components/button/BtnGroup'
 
   export default {
-    components: {BtnGroup, Map, LoadingIcon},
+    components: {Map, LoadingIcon},
     data () {
       return {
         loading: false,
@@ -198,6 +209,14 @@
       loadSavedLine (savedLines) {
         this.lines = savedLines.data
         this.loadModalVisible = false
+      },
+      clearSaved () {
+        localStorage.removeItem('saved')
+        this.loadModalVisible = false
+        this.$notify({
+          type: 'success',
+          content: '方案数据已清除'
+        })
       }
     }
   }
