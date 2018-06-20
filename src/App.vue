@@ -235,12 +235,12 @@
   }
 
   .gui {
-    z-index: 998;
+    z-index: 1000;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    background: #eee;
+    background: #f0f0f0;
     height: 50px;
     padding: 10px;
     display: flex;
@@ -248,6 +248,7 @@
     justify-content: center;
     align-items: center;
     overflow: visible;
+    box-shadow: 0 4px 10px -5px #000;
 
     .input-box {
       flex: 1;
