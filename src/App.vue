@@ -192,6 +192,7 @@
             type: 'info',
             content: '请输入方案名'
           })
+          return
         }
         const saved = localStorage.getItem('saved')
         const savedArr = saved ? JSON.parse(saved) : []
