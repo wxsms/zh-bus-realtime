@@ -3,7 +3,10 @@
     <Map :lines="lines"/>
     <div class="gui">
       <div class="input-box">
-        <input id="input" ref="input" class="form-control" type="text" placeholder="Type to search...">
+        <input id="input" ref="input" class="form-control" type="text" placeholder="输入线路...">
+        <div class="loading-icon" v-show="loading">
+          <loading-icon/>
+        </div>
         <typeahead
           force-select
           v-model="selectedLine"
@@ -26,7 +29,7 @@
       </div>
       <div class="menu-box">
         <dropdown ref="dropdown" menu-right>
-          <btn type="primary" class="dropdown-toggle">已选线路（{{lines.length}}条） <span class="caret"></span></btn>
+          <btn type="primary" class="dropdown-toggle">已选 ({{lines.length}})<span class="caret"></span></btn>
           <template slot="dropdown">
             <li v-for="(line,index) in lines" @click="removeLine(index)">
               <a role="button">
@@ -53,11 +56,13 @@
   import Map from './components/Map.vue'
   import * as service from './services/zhBusService'
   import findIndex from 'lodash/findIndex'
+  import LoadingIcon from './components/LoadingIcon.vue'
 
   export default {
-    components: {Map},
+    components: {Map, LoadingIcon},
     data () {
       return {
+        loading: false,
         selectedLine: null,
         lines: []
       }
@@ -86,11 +91,14 @@
     },
     methods: {
       queryFunction (query, done) {
+        this.loading = true
         service.getLineDetailByName(query)
           .then(res => {
+            this.loading = false
             done(res.data.data)
           })
           .catch(err => {
+            this.loading = false
             console.error(err)
           })
       },
@@ -128,7 +136,14 @@
     overflow: visible;
 
     .input-box {
-      flex: 1
+      flex: 1;
+      position: relative;
+    }
+
+    .loading-icon {
+      position: absolute;
+      top: 6.5px;
+      right: 5px;
     }
 
     .menu-box {

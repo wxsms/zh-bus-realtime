@@ -3,8 +3,8 @@
     <div id="map"></div>
     <div class="refresh-btn" v-show="lines && lines.length">
       <btn @click="refreshMap(false)" :disabled="refreshing">
-        <span v-if="refreshing">......</span>
-        <span v-else>刷新</span>
+        <loading-icon v-show="refreshing"/>
+        <div v-show="!refreshing" class="btn-text">刷新</div>
       </btn>
     </div>
   </div>
@@ -12,6 +12,7 @@
 
 <script>
   import L from 'leaflet'
+  import LoadingIcon from './LoadingIcon.vue'
   import * as service from '../services/zhBusService'
   import findIndex from 'lodash/findIndex'
   import flatten from 'lodash/flatten'
@@ -58,6 +59,7 @@
   })
 
   export default {
+    components: {LoadingIcon},
     props: ['lines'],
     data () {
       return {
@@ -215,11 +217,11 @@
           const stationIndex = findIndex(stations, {Name: v.CurrentStation})
           if (stationIndex >= 0) {
             let lat, lng
-            if (v.LastPosition === '8') {
+            if (v.LastPosition === '8' || (stationIndex === stations.length - 1 && v.LastPosition === '5')) {
               const station = stations[stationIndex]
               lat = station.Lat
               lng = station.Lng
-            } else if (stationIndex < stations.length - 2 && v.LastPosition === '5') {
+            } else {
               const station = stations[stationIndex]
               const stationNext = stations[stationIndex + 1]
               lat = (station.Lat + stationNext.Lat) / 2
@@ -259,6 +261,11 @@
 
       .btn {
         width: 55px;
+
+        .btn-text {
+          height: 22px;
+          line-height: 22px;
+        }
       }
     }
   }
