@@ -86,8 +86,11 @@
         <h5>直接点击预设方案即可读取</h5>
         <div>
           <btn-group vertical style="width: 100%">
-            <btn :type="index%2===0?'info':'primary'" v-for="(savedLines,index) in saved"
-                 @click="loadSavedLine(savedLines)">
+            <btn
+              :key="index"
+              :type="index%2===0?'info':'primary'"
+              v-for="(savedLines,index) in saved"
+              @click="loadSavedLine(savedLines)">
               {{savedLines.name}}
             </btn>
           </btn-group>
