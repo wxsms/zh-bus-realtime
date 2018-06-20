@@ -2,6 +2,7 @@
 
 * 巴士线路、站点、实时位置查询
 * 支持同时查看多条线路
+* 支持保存、读取线路方案（LocalStorage）
 
 地址：[https://zhbus.wxsm.space](https://zhbus.wxsm.space)
 
