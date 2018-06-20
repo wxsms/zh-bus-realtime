@@ -47,8 +47,43 @@
             </li>
           </template>
         </dropdown>
+        <btn-group>
+          <btn @click="showSaveModal">
+            <span class="glyphicon glyphicon-floppy-save"></span>
+          </btn>
+          <btn @click="showLoadModal">
+            <span class="glyphicon glyphicon-floppy-open"></span>
+          </btn>
+        </btn-group>
       </div>
     </div>
+    <modal v-model="saveModalVisible" title="保存当前方案">
+      <div>
+        <input ref="input" class="form-control" type="text" placeholder="输入方案名..." v-model="saveName">
+      </div>
+      <br/>
+      <ol>
+        <li v-for="line in lines">
+          <span>{{line.name}}</span>
+          <small>
+            <span>[{{line.fromStation}}</span>
+            <span>&gt;</span>
+            <span>{{line.toStation}}]</span>
+          </small>
+        </li>
+      </ol>
+      <div slot="footer">
+        <btn @click="saveModalVisible=false">取消</btn>
+        <btn type="primary" @click="onSaveSubmit">确认</btn>
+      </div>
+    </modal>
+    <modal v-model="loadModalVisible" title="读取方案" :footer="false">
+      <btn-group vertical style="width: 100%">
+        <btn class="list-group-item" v-for="savedLines in saved" @click="loadSavedLine(savedLines)">
+          {{savedLines.name}}
+        </btn>
+      </btn-group>
+    </modal>
   </div>
 </template>
 
@@ -57,14 +92,19 @@
   import * as service from './services/zhBusService'
   import findIndex from 'lodash/findIndex'
   import LoadingIcon from './components/LoadingIcon.vue'
+  import BtnGroup from 'uiv/src/components/button/BtnGroup'
 
   export default {
-    components: {Map, LoadingIcon},
+    components: {BtnGroup, Map, LoadingIcon},
     data () {
       return {
         loading: false,
         selectedLine: null,
-        lines: []
+        lines: [],
+        saveModalVisible: false,
+        loadModalVisible: false,
+        saveName: '',
+        saved: []
       }
     },
     watch: {
@@ -104,6 +144,60 @@
       },
       removeLine (index) {
         this.lines.splice(index, 1)
+      },
+      showSaveModal () {
+        if (typeof window.localStorage === 'undefined') {
+          this.$notify({
+            type: 'warning',
+            content: '浏览器不支持 LocalStorage，无法保存方案'
+          })
+          return
+        }
+        if (this.lines && this.lines.length > 0) {
+          this.saveModalVisible = true
+          this.saveName = ''
+        } else {
+          this.$notify({
+            type: 'info',
+            content: '要保存方案，请先选择至少一条线路'
+          })
+        }
+      },
+      showLoadModal () {
+        if (typeof window.localStorage === 'undefined') {
+          this.$notify({
+            type: 'warning',
+            content: '浏览器不支持 LocalStorage，无法读取方案'
+          })
+          return
+        }
+        const saved = localStorage.getItem('saved')
+        this.saved = saved ? JSON.parse(saved) : []
+        this.loadModalVisible = true
+      },
+      onSaveSubmit () {
+        if (this.saveName === '') {
+          this.$notify({
+            type: 'info',
+            content: '请输入方案名'
+          })
+        }
+        const saved = localStorage.getItem('saved')
+        const savedArr = saved ? JSON.parse(saved) : []
+        savedArr.push({
+          name: this.saveName,
+          data: this.lines
+        })
+        localStorage.setItem('saved', JSON.stringify(savedArr))
+        this.saveModalVisible = false
+        this.$notify({
+          type: 'success',
+          content: '方案已保存'
+        })
+      },
+      loadSavedLine (savedLines) {
+        this.lines = savedLines.data
+        this.loadModalVisible = false
       }
     }
   }
@@ -121,7 +215,7 @@
   }
 
   .gui {
-    z-index: 9998;
+    z-index: 998;
     position: fixed;
     top: 0;
     left: 0;

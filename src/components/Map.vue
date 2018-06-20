@@ -257,7 +257,7 @@
       position: absolute;
       bottom: 25px;
       right: 10px;
-      z-index: 99999;
+      z-index: 999;
 
       .btn {
         width: 55px;

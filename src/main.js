@@ -6,11 +6,11 @@ import Vue from 'vue'
 import App from './App'
 import axios from 'axios'
 import * as uiv from 'uiv'
+import locale from 'uiv/src/locale/lang/zh-CN'
 
+Vue.use(uiv, {locale})
 Vue.config.productionTip = false
 Vue.prototype.$http = axios
-
-Vue.use(uiv)
 
 /* eslint-disable no-new */
 new Vue({
