@@ -4,7 +4,9 @@
 * 支持同时查看多条线路
 * 支持保存、读取线路方案（LocalStorage）
 
-地址：[https://zhbus.wxsm.space](https://zhbus.wxsm.space)
+<del>地址：https://zhbus.wxsm.space</del>
+
+（公交查询接口已失效，项目下线）
 
 截图：
 
